@@ -1,0 +1,76 @@
+1. Bonjour, je m'appelle Gael Delescluse et je vais vous présenter mon 4ème projet : la construction d'un modèle de scoring pour un banque.
+
+2. Table des matières
+
+3. 
+
+Les prêts accordés aux particuliers sont un moteur essentiel de la consommation, de l'investissement et de la croissance économique. Ils permettent aux individus de financer des projets tels que l'achat d'un logement, d'une voiture ou encore la création d'une entreprise.
+Lorsqu'un emprunteur ne parvient pas à rembourser son prêt, les banques subissent des pertes financières directes. Ces pertes ont un impact sur leur rentabilité et peuvent mettre en péril leur stabilité financière, particulièrement si le défaut de remboursement concerne un grand nombre de clients ou des montants considérables.
+Le défaut de remboursement peut réduire la rentabilité d'une banque de 10 à 20% en moyenne.
+En moyenne, le taux de défaut de remboursement des prêts aux particuliers se situe autour de 2 à 3%.
+Uniquement pour la France les particuliers sont endetté à hauteur de 200milliards.
+
+Les banques allouent une part importante de leurs revenus à la constitution de provisions pour faire face aux éventuels défauts de remboursement, généralement autour de 20 à 30% de leurs bénéfices annuels.
+C'est pourquoi dans ce projet, la banque souhaite mettre en œuvre un outil de “scoring crédit” qui calcule la probabilité qu’un client le rembourse ou non, puis classifie la demande : crédit accordé ou refusé. 
+Nous tenterons de répondre à cette problématique dans cette présentation.
+
+4. Une première analyse du projet permet de constater que les données sont stocké dans différents fichier  avec un fichier central application_train.csv qui concentre la plupart des données du projet et un fichier application_test.csv qui permet d'appliquer le modèle de scoring sur des données que le modèle ne connaitrait pas. Malheureusement dans ce fichier il n'y a pas de variable TARGET je ne pouvais donc pas utiliser ce fichier pour mon modèle. Ce fichier devait servir au concours duquel ce projet est tiré.
+Dans le fichier application_train on retrouve 307.511 individus, caractérisé par 122 variables pouvant être catégorielle ou continues. On retrouve également de nombreuse données manquantes ou aberrante ainsi que des valeurs négatives.
+
+5. On constate rapidement qu'il y a un déséquilibre de la variable cible qui nous permet de savoir si un client a fait défaut sur son crédit avec 0 pour le remboursement et 1 pour le non remboursement.
+ Avec une classe surreprésentée par rapport à une autre, le modèle peut être biaisé en faveur de la classe majoritaire, il pourra avoir tendance à prédire plus souvent cette classe majoritaire, au détriment de la classe minoritaire. Ainsi il peut avoir du mal à généraliser correctement les modèles de la classe minoritaire lorsqu'il est exposé à de nouvelles données.
+
+6. Nous ne pouvons pas appliquer de modèle de machine learning avec des variables catégorielles, nous devons donc les transformer. Pour ce faire j'ai utilisé Label Encoding pour les variables n'ayant que 2 catégories différentes car labelencoding donne une valeur à chaque catégorie de la variable sans logique précise et imputer des valeurs aléatoires au catégorie pourrait nuire à la compréhension de notre modèle sur la pertinence de chaque catégorie. 
+J'ai utilisé le oneHot encoding pour les variables catégorielles possédant plus de 2 catégories différentes, car cette transformation ne crée pas d'ordre de valeurs entre les différentes catégories mais il ajoute un soucis de dimensionnalité en ajoutant de nouvelles variables à notre dataset
+
+7. On peut constater des valeurs aberrantes pour la variables DAYS_EMPLOYEMENT, en effet certains individus ont 365243 jours travaillés, ce qui correspond à 1000 ans de travaillé. Ces valeurs aberrantes étant toutes à la même valeurs je l'ai ai toutes remplacé par 0. On retrouve une répartition des valeurs plus conforme à la réalité. Les valeurs négatives de la variable correspondent au nombre de jour travaillé par rapport à la date de demande de crédit.
+
+8. Nous pouvons par la suite étudier la corrélation entre les variables et la variable cible en séparant notre étude de la corrélation entre les variables catégorielles et continues. On peut remarquer que la corrélation des variables avec la variable cible est très faible. On peut tout de même constater que les variables EXT_SOURCES sont un peu plus anti-corrélé a la variable cible, malheureusement la documentation ne nous permet pas de comprendre ces variables.
+Les variables les plus corrélé avec la cible et que nous pouvons comprendre sont les variables DAY_EMPLOYEMENT et DAY_BIRTH qui correspondent au nombre de jour travaillé et à l'age du client.
+
+9. On peut constater que suivant l'age du client, plus il est âgé moins il est susceptible de faire défaut sur son crédit. Le taux de non-remboursement est supérieur à 10 % pour les trois tranches d'âge les plus jeunes et inférieur à 5 % pour la tranche d'âge la plus âgée.
+
+10. les clients ayant le moins ou pas travaillé sont plus susceptibles de ne pas rembourser leur prêt. Le taux de non-remboursement est supérieur à 10 % pour la première tranche alors qu'elle passe à moins de 6% pour ceux ayant déjà travaillé plus de 10 ans.
+Cette observation peut directement être rattaché à notre précédente observation concernant les plus jeune ayant des difficultés à rembourser leur prêt. En effet les plus jeune sont ceux étant les plus susceptible à ne pas avoir beaucoup travaillé.
+Il s’agit d’informations qui pourraient être directement utilisées par la banque : étant donné que les clients plus jeunes sont moins susceptibles d'avoir beaucoup travaillé il y aura un plus grand risque de défaut de crédit.
+
+11. Nous pouvons immédiatement remarquer la corrélation mis en avant précédemment entre DAYS_EMPLOYED et DAYS_BIRTH. En effet les plus jeune sont ceux les plus susceptible à avoir le moins travaillé. Egalement il semble y avoir une relation linéaire positive modérée entre EXT_SOURCE_1 et DAYS_BIRTH (ou de manière équivalente YEARS_BIRTH), indiquant que cette features peut prendre en compte l'âge du client. Les trois variables EXT_SOURCE ont des corrélations négatives avec la TARGET, ce qui indique qu'à mesure que la valeur de EXT_SOURCE augmente, le client est plus susceptible de rembourser le prêt. Nous pouvons également voir que DAYS_BIRTH est positivement corrélé avec EXT_SOURCE_1, ce qui indique que l'un des facteurs de ce score est peut-être l'âge du client.
+
+12. Les fonctions polynomiales sont des fonctions mathématiques qui consistent en des combinaisons linéaires de puissances entières d'une variable. Elles sont composées de termes où la variable est élevée à des exposants entiers. J'ai ici essayé de transformer les variables les plus corrélés avec la cible pour capturer des relations non linéaires entre les variables. Malheureusement après une étude de corrélation on se rend compte que ces nouvelles features créés n'auront pas d'impact significatif dans l'exploitation d'un modèle de machine learning.
+
+13. On constate qu'il y a de nombreuses features dans ce dataset, difficile de cerner leur utilité et importance, pour tenter d'appréhender les liaisons entre la TARGET et les variables, un participant au concours à créer un algorithme pour exprimer différemment plusieurs variables. Malheureusement leur corrélation avec la TARGET est très faible et ne permet pas leur utilisation dans un modèle. Je n'ai rien pu en tirer mais cela permet d'exprimer différemment les features
+
+14. Le dataset ayant de très nombreuses features, pour la plupart indicative et sans réel intérêt pour la création d'un modèle adapté à notre problématique. J'ai décidé de réduire la dimension du dataset en utilisant un test de kruskal-willis car la distribution des variables n'étant pas normalement distribution ni homoscédastique. Ce test m'a permis d'éliminer les variables dont la distribution était indépendante de la variable cible, ainsi j'ai pu réduire la dimension du dataset, en supprimant une variable, l'identifiant de l'individu, puis j'ai effectué un test chi2 pour éliminer les variables catégorielles indépendantes de la variable cible.
+
+15. J'ai par la suite effectué une étude de la corrélation des variables entres elles pour voir si certaines d'entres elles étaient fortement corrélés à une autre avec un seuil de 0.7 pour éviter les doublons de variables, puis j'ai supprimé l'une des deux variables pour réduire la dimension d'étude du dataset.
+
+16. Pour finir ce nettoyage du dataset, j'ai ensuite cherché à éliminer les valeurs manquantes. J'ai trouvé 3 variables ayant plus de 20% de valeurs manquantes. 2 d'entres elles étaient très faiblement corrélé à la TARGET et l'une d'entre elle était fortement corrélé à une autres variable, DAYS_BIRTH, pour éviter d'ajout du biais au dataset j'ai décidé de supprimer ces variables.
+Pour le reste des valeurs manquantes, il s'agissait de days_employed, j'ai remplacé les valeurs manquantes par ce qui me semblait le plus logique à savoir zéro pour indiquer que l'individu n'avait jamais travaillé
+
+17. Viens ensuite le problème de déséquilibre de la variable cible. Effectuer du SMOT peut entrainer un certain biais dans la distribution des variables, j'ai donc décidé d'analyser deux types de méthode SMOT pour ma sélection de modèle à savoir l'undersampling et l'hybrid resampling. L'undersampling per de diminuer la variable majoritaire alors que l'hybrid resampling diminue la variable majoritaire et augmente la variable minoritaire permettant de conserver une certaine cohérence de distribution sans que celle ci soit complètement biaisé par la surreprésentation de la variable majoritaire.
+
+18. Pour une baseline naïve, nous pourrions deviner la même valeur pour tous les exemples de l'ensemble de test. On nous demande de prédire la probabilité de ne pas rembourser le prêt, donc si nous sommes totalement incertains, nous devinerions 0,5 pour toutes les observations de l'ensemble de test. 
+J'ai utilisé un modèle légèrement plus sophistiqué qui me servirait de référence, la régression logistique.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
